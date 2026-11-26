@@ -2,13 +2,13 @@
   "expo": {
     "name": "BulkScan",
     "slug": "bulkscan",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0E1116",
     "android": {
       "package": "com.rentschler.bulkscan",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "CAMERA",
         "POST_NOTIFICATIONS"

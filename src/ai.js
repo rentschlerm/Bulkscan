@@ -25,42 +25,58 @@ let thinkingIdx = 0; // remembered for the session once a setting works
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function callGemini({ images, text, apiKey, model, system, signal }) {
+// When the main model is overloaded (503) or its free quota is used up (429),
+// fall back to Google's lighter model, which has its own separate free quota.
+const GEMINI_FALLBACK = 'gemini-flash-lite-latest';
+
+async function callGemini({ images, text, apiKey, model, system, signal, onStatus }) {
   const parts = images.map((b64) => ({ inline_data: { mime_type: 'image/jpeg', data: b64 } }));
   parts.push({ text });
-  let retried = false;
-  while (true) {
-    const thinking = THINKING_OPTIONS[thinkingIdx];
-    const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 2048 };
-    if (thinking) generationConfig.thinkingConfig = thinking;
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        signal,
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: system }] },
-          contents: [{ role: 'user', parts }],
-          generationConfig,
-        }),
+  const models = model === GEMINI_FALLBACK ? [model] : [model, GEMINI_FALLBACK];
+  let lastMsg = '';
+  let quotaHit = false;
+  for (let m = 0; m < models.length; m++) {
+    if (m > 0) onStatus?.('Main model busy, using backup…');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const thinking = THINKING_OPTIONS[thinkingIdx];
+      const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 2048 };
+      if (thinking) generationConfig.thinkingConfig = thinking;
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(models[m])}:generateContent`,
+        {
+          method: 'POST',
+          signal,
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: system }] },
+            contents: [{ role: 'user', parts }],
+            generationConfig,
+          }),
+        }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        return (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
       }
-    );
-    const j = await res.json();
-    if (res.ok) return (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
-    const msg = j?.error?.message || '';
-    if (res.status === 400 && /think/i.test(msg) && thinkingIdx < THINKING_OPTIONS.length - 1) {
-      thinkingIdx++; // this model doesn't accept that thinking setting; try the next
-      continue;
+      lastMsg = j?.error?.message || `Gemini error ${res.status}`;
+      if (res.status === 400 && /think/i.test(lastMsg) && thinkingIdx < THINKING_OPTIONS.length - 1) {
+        thinkingIdx++; // model rejects this thinking setting; try the next one
+        attempt--;
+        continue;
+      }
+      if (res.status === 429) {
+        quotaHit = true;
+        break; // this model's quota is used up, go straight to the backup
+      }
+      if (res.status === 503 || res.status === 500) {
+        if (attempt === 0) await sleep(2000);
+        continue;
+      }
+      throw new Error(lastMsg); // a real error (bad key, bad request): don't retry
     }
-    if ((res.status === 503 || res.status === 500) && !retried) {
-      retried = true; // Google's free tier is sometimes briefly overloaded
-      await sleep(1500);
-      continue;
-    }
-    if (res.status === 429) throw new Error('Free limit reached for now. Wait a minute (or until tomorrow), or log by search/weight meanwhile.');
-    throw new Error(msg || `Gemini error ${res.status}`);
   }
+  if (quotaHit) throw new Error('Free limit reached on both models for now. Try again in a minute (or tomorrow), or log by search/weight.');
+  throw new Error("Google's free AI servers are overloaded right now. Try again in a few minutes, or log this meal by search/weight.");
 }
 
 async function callClaude({ images, text, apiKey, model, system, signal }) {
@@ -131,7 +147,7 @@ function extractJson(text) {
  * @param {{q:string,a:string}[]} [opts.answers] answers to earlier clarifying questions
  * @param {object[]} [opts.previous] previous item list, for a refinement pass
  */
-export async function analyzeMeal({ images, apiKey, provider = 'gemini', model, plateCm = 25, context = '', answers = [], previous, myFoods = [], signal: outerSignal }) {
+export async function analyzeMeal({ images, apiKey, provider = 'gemini', model, plateCm = 25, context = '', answers = [], previous, myFoods = [], signal: outerSignal, onStatus }) {
   const P = PROVIDERS[provider] || PROVIDERS.gemini;
   if (!apiKey) throw new Error(`Add your ${P.label} API key in Settings to use photo scanning.`);
   let text = images.length > 1 ? `These are ${images.length} angles of the same meal.` : 'Estimate this meal.';
@@ -160,7 +176,7 @@ export async function analyzeMeal({ images, apiKey, provider = 'gemini', model, 
   outerSignal?.addEventListener?.('abort', onOuter);
   let out;
   try {
-    out = await P.call({ images, text, apiKey, model: model || P.defaultModel, system: systemPrompt(plateCm), signal: ctrl.signal });
+    out = await P.call({ images, text, apiKey, model: model || P.defaultModel, system: systemPrompt(plateCm), signal: ctrl.signal, onStatus });
   } catch (e) {
     if (timedOut) throw new Error('The AI took over 60 s (slow connection or busy free tier). Try again, or use 1 photo instead of several.');
     if (outerSignal?.aborted) throw new Error('CANCELLED');

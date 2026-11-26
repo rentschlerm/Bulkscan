@@ -37,6 +37,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
   const [photoTip, setPhotoTip] = useState('');
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [status, setStatus] = useState('');
   const abortRef = useRef(null);
 
   useEffect(() => {
@@ -84,6 +85,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
     if (!photos.length) return;
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    setStatus('');
     setLoading(true);
     try {
       const ans = refine
@@ -100,6 +102,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
         answers: ans,
         previous: refine ? items : null,
         signal: ctrl.signal,
+        onStatus: setStatus,
       });
       if (!r.items.length) {
         Alert.alert('No food found', r.photo_tip || 'Try another photo.');
@@ -275,8 +278,10 @@ export default function AddScreen({ date, initialMode, onDone }) {
           disabled={!photos.length || loading}
           onPress={() => runAnalysis(false)}
         />
-        {loading && elapsed >= 15 ? (
-          <Sub style={{ marginTop: 6, textAlign: 'center' }}>Free tier is busy right now. It stops by itself at 60 s.</Sub>
+        {loading && (status || elapsed >= 15) ? (
+          <Sub style={{ marginTop: 6, textAlign: 'center' }}>
+            {status || 'Free tier is busy right now.'} It stops by itself at 60 s.
+          </Sub>
         ) : null}
         <Btn kind="secondary" title={loading ? 'Stop' : 'Cancel'} onPress={loading ? cancelAnalysis : reset} style={{ marginTop: 8 }} />
       </ScrollView>
