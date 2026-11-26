@@ -24,9 +24,7 @@ jobs:
           java-version: 17
 
       - name: Install dependencies
-        run: |
-          npm install
-          npx expo install --fix
+        run: npm install
 
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
