@@ -19,34 +19,56 @@ export const PROVIDERS = {
 export const DEFAULT_PROVIDER = 'gemini';
 export const DEFAULT_MODEL = PROVIDERS.gemini.defaultModel;
 
-async function callGemini({ images, text, apiKey, model, system }) {
+// Thinking makes Gemini slow (often 20–60 s). Keep it low; fall back if a model rejects the setting.
+const THINKING_OPTIONS = [{ thinkingLevel: 'low' }, { thinkingBudget: 512 }, null];
+let thinkingIdx = 0; // remembered for the session once a setting works
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function callGemini({ images, text, apiKey, model, system, signal }) {
   const parts = images.map((b64) => ({ inline_data: { mime_type: 'image/jpeg', data: b64 } }));
   parts.push({ text });
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-      }),
+  let retried = false;
+  while (true) {
+    const thinking = THINKING_OPTIONS[thinkingIdx];
+    const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 2048 };
+    if (thinking) generationConfig.thinkingConfig = thinking;
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: 'POST',
+        signal,
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts }],
+          generationConfig,
+        }),
+      }
+    );
+    const j = await res.json();
+    if (res.ok) return (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
+    const msg = j?.error?.message || '';
+    if (res.status === 400 && /think/i.test(msg) && thinkingIdx < THINKING_OPTIONS.length - 1) {
+      thinkingIdx++; // this model doesn't accept that thinking setting; try the next
+      continue;
     }
-  );
-  const j = await res.json();
-  if (!res.ok) {
-    if (res.status === 429) throw new Error('Free daily/minute limit reached. Wait a minute (or until tomorrow), or log by search/weight meanwhile.');
-    throw new Error(j?.error?.message || `Gemini error ${res.status}`);
+    if ((res.status === 503 || res.status === 500) && !retried) {
+      retried = true; // Google's free tier is sometimes briefly overloaded
+      await sleep(1500);
+      continue;
+    }
+    if (res.status === 429) throw new Error('Free limit reached for now. Wait a minute (or until tomorrow), or log by search/weight meanwhile.');
+    throw new Error(msg || `Gemini error ${res.status}`);
   }
-  return (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
 }
 
-async function callClaude({ images, text, apiKey, model, system }) {
+async function callClaude({ images, text, apiKey, model, system, signal }) {
   const content = images.map((b64) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }));
   content.push({ type: 'text', text });
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
+    signal,
     headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model, max_tokens: 1500, temperature: 0, system, messages: [{ role: 'user', content }] }),
   });
@@ -59,17 +81,17 @@ export async function prepareImage(uri) {
   // Resize to ~1280px: plenty of detail for portion estimation, small enough to upload fast.
   try {
     if (ImageManipulator.ImageManipulator?.manipulate) {
-      const ctx = ImageManipulator.ImageManipulator.manipulate(uri).resize({ width: 1280 });
+      const ctx = ImageManipulator.ImageManipulator.manipulate(uri).resize({ width: 1024 });
       const img = await ctx.renderAsync();
-      const out = await img.saveAsync({ base64: true, compress: 0.75, format: ImageManipulator.SaveFormat.JPEG });
+      const out = await img.saveAsync({ base64: true, compress: 0.7, format: ImageManipulator.SaveFormat.JPEG });
       return out.base64;
     }
   } catch (e) {
     // fall through to the older API
   }
-  const out = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1280 } }], {
+  const out = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1024 } }], {
     base64: true,
-    compress: 0.75,
+    compress: 0.7,
     format: ImageManipulator.SaveFormat.JPEG,
   });
   return out.base64;
@@ -109,7 +131,7 @@ function extractJson(text) {
  * @param {{q:string,a:string}[]} [opts.answers] answers to earlier clarifying questions
  * @param {object[]} [opts.previous] previous item list, for a refinement pass
  */
-export async function analyzeMeal({ images, apiKey, provider = 'gemini', model, plateCm = 25, context = '', answers = [], previous, myFoods = [] }) {
+export async function analyzeMeal({ images, apiKey, provider = 'gemini', model, plateCm = 25, context = '', answers = [], previous, myFoods = [], signal: outerSignal }) {
   const P = PROVIDERS[provider] || PROVIDERS.gemini;
   if (!apiKey) throw new Error(`Add your ${P.label} API key in Settings to use photo scanning.`);
   let text = images.length > 1 ? `These are ${images.length} angles of the same meal.` : 'Estimate this meal.';
@@ -128,7 +150,25 @@ export async function analyzeMeal({ images, apiKey, provider = 'gemini', model, 
       JSON.stringify(previous.map((i) => ({ name: i.name, grams: i.grams }))) +
       '\nRevise it using the new information. Only ask new questions if still needed.';
   }
-  const out = await P.call({ images, text, apiKey, model: model || P.defaultModel, system: systemPrompt(plateCm) });
+  const ctrl = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, 60000);
+  const onOuter = () => ctrl.abort();
+  outerSignal?.addEventListener?.('abort', onOuter);
+  let out;
+  try {
+    out = await P.call({ images, text, apiKey, model: model || P.defaultModel, system: systemPrompt(plateCm), signal: ctrl.signal });
+  } catch (e) {
+    if (timedOut) throw new Error('The AI took over 60 s (slow connection or busy free tier). Try again, or use 1 photo instead of several.');
+    if (outerSignal?.aborted) throw new Error('CANCELLED');
+    throw e;
+  } finally {
+    clearTimeout(timer);
+    outerSignal?.removeEventListener?.('abort', onOuter);
+  }
   const data = extractJson(out);
   data.items = (data.items || []).map((it, idx) => ({
     key: String(Date.now()) + idx,

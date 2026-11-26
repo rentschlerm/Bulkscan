@@ -36,6 +36,17 @@ export default function AddScreen({ date, initialMode, onDone }) {
   const [answers, setAnswers] = useState({});
   const [photoTip, setPhotoTip] = useState('');
   const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const abortRef = useRef(null);
+
+  useEffect(() => {
+    if (!loading) return;
+    setElapsed(0);
+    const t = setInterval(() => setElapsed((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [loading]);
+
+  const cancelAnalysis = () => abortRef.current?.abort();
   const [meal, setMeal] = useState(guessMeal());
   const [saveAsMine, setSaveAsMine] = useState(false);
   const [mineName, setMineName] = useState('');
@@ -71,6 +82,8 @@ export default function AddScreen({ date, initialMode, onDone }) {
 
   async function runAnalysis(refine = false) {
     if (!photos.length) return;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setLoading(true);
     try {
       const ans = refine
@@ -86,6 +99,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
         context,
         answers: ans,
         previous: refine ? items : null,
+        signal: ctrl.signal,
       });
       if (!r.items.length) {
         Alert.alert('No food found', r.photo_tip || 'Try another photo.');
@@ -97,8 +111,9 @@ export default function AddScreen({ date, initialMode, onDone }) {
         setMode('review');
       }
     } catch (e) {
-      Alert.alert('Scan failed', String(e.message || e));
+      if (e.message !== 'CANCELLED') Alert.alert('Scan failed', String(e.message || e));
     } finally {
+      abortRef.current = null;
       setLoading(false);
     }
   }
@@ -255,8 +270,15 @@ export default function AddScreen({ date, initialMode, onDone }) {
             Tips: shoot from about 45°, whole plate in frame, leave a spoon or fork beside the plate for scale.
           </Sub>
         </Card>
-        <Btn title="Analyze meal" loading={loading} disabled={!photos.length} onPress={() => runAnalysis(false)} />
-        <Btn kind="secondary" title="Cancel" onPress={reset} style={{ marginTop: 8 }} />
+        <Btn
+          title={loading ? `Analyzing… ${elapsed}s` : 'Analyze meal'}
+          disabled={!photos.length || loading}
+          onPress={() => runAnalysis(false)}
+        />
+        {loading && elapsed >= 15 ? (
+          <Sub style={{ marginTop: 6, textAlign: 'center' }}>Free tier is busy right now. It stops by itself at 60 s.</Sub>
+        ) : null}
+        <Btn kind="secondary" title={loading ? 'Stop' : 'Cancel'} onPress={loading ? cancelAnalysis : reset} style={{ marginTop: 8 }} />
       </ScrollView>
     );
   }
@@ -339,9 +361,8 @@ export default function AddScreen({ date, initialMode, onDone }) {
             ))}
             <Btn
               kind="secondary"
-              title="Re-analyze with answers"
-              loading={loading}
-              disabled={!Object.values(answers).some((a) => a && a.trim())}
+              title={loading ? `Re-analyzing… ${elapsed}s` : 'Re-analyze with answers'}
+              disabled={loading || !Object.values(answers).some((a) => a && a.trim())}
               onPress={() => runAnalysis(true)}
             />
           </Card>
