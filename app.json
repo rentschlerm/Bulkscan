@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "BulkScan",
+    "slug": "bulkscan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0E1116",
+    "android": {
+      "package": "com.rentschler.bulkscan",
+      "versionCode": 1,
+      "permissions": ["CAMERA", "POST_NOTIFICATIONS"]
+    },
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "BulkScan uses the camera to photograph meals and scan barcodes." }],
+      ["expo-image-picker", { "photosPermission": "BulkScan reads photos of meals you pick from your gallery." }],
+      "expo-notifications",
+      "expo-secure-store"
+    ]
+  }
+}
