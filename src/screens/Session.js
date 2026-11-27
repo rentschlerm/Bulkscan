@@ -4,6 +4,7 @@ import { ScrollView, View, Text, TouchableOpacity, TextInput, Alert, Vibration }
 import { useStore } from '../store';
 import { Card, H, Sub, Btn, Chip, s as ui } from '../components/ui';
 import ExercisePicker from '../components/ExercisePicker';
+import ExerciseDemo from '../components/ExerciseDemo';
 import { C } from '../theme';
 import { EX, WARMUP, swapOptions } from '../exercises';
 import { gearFor, makeExercise, sessionStats, burnKcal, findPRs, fmtTime } from '../workout';
@@ -21,6 +22,7 @@ export default function SessionScreen({ onMinimize, onFinished }) {
   const [picker, setPicker] = useState(null); // 'swap' | 'add' | null
   const [timed, setTimed] = useState(null); // {ex, set, phase:'ready'|'go', endAt, time}
   const [warmOpen, setWarmOpen] = useState(true);
+  const [showDemo, setShowDemo] = useState(true);
   const alerted = useRef(false);
 
   useEffect(() => {
@@ -248,9 +250,11 @@ export default function SessionScreen({ onMinimize, onFinished }) {
                 <Text style={{ color: C.sub }}>🗑</Text>
               </TouchableOpacity>
             </View>
+            {showDemo ? <ExerciseDemo id={item.id} /> : null}
             <Text style={{ color: item.up ? C.accent : C.carbs, marginTop: 8, fontSize: 13 }}>{item.up ? '⬆ ' : '🎯 '}{item.hint}</Text>
             <View style={{ flexDirection: 'row', marginTop: 8 }}>
-              <Chip label={showCues ? 'Hide form tips' : 'How to do it'} active={showCues} onPress={() => setShowCues(!showCues)} />
+              <Chip label={showDemo ? 'Hide demo' : '▶ Demo'} active={showDemo} onPress={() => setShowDemo(!showDemo)} />
+              <Chip label={showCues ? 'Hide tips' : 'Form tips'} active={showCues} onPress={() => setShowCues(!showCues)} />
               <Chip label="⇄ Swap" onPress={() => setPicker('swap')} />
             </View>
             {showCues ? def.cues.map((c, i) => <Text key={i} style={{ color: C.text, marginBottom: 3 }}>• {c}</Text>) : null}

@@ -3,6 +3,7 @@ import { Modal, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { C } from '../theme';
 import { H, Sub, Chip, Btn, Field } from './ui';
 import { EXERCISES, MUSCLES, hasGear } from '../exercises';
+import ExerciseDemo from './ExerciseDemo';
 
 const GEAR_LABEL = { db: 'dumbbells', bench: 'bench', bar: 'pull-up bar', band: 'band', bb: 'barbell', gym: 'machine' };
 
@@ -60,10 +61,17 @@ export default function ExercisePicker({ visible, onClose, onPick, gear, title =
                 {ex.muscle} · {gearText(ex)}
                 {ex.kind === 'time' ? ' · timed' : ''}
               </Text>
-              {open === ex.id ? ex.cues.map((c, i) => <Text key={i} style={{ color: C.text, fontSize: 13, marginTop: 3 }}>• {c}</Text>) : null}
+              {open === ex.id ? (
+                <>
+                  <ExerciseDemo id={ex.id} height={170} />
+                  {ex.cues.map((c, i) => (
+                    <Text key={i} style={{ color: C.text, fontSize: 13, marginTop: 3 }}>• {c}</Text>
+                  ))}
+                </>
+              ) : null}
             </TouchableOpacity>
           ))}
-          {onPick ? <Sub style={{ marginTop: 8 }}>Tip: long-press an exercise to see how to do it.</Sub> : null}
+          <Sub style={{ marginTop: 8 }}>{onPick ? 'Tip: long-press an exercise to watch the demo first.' : 'Tap an exercise to watch the demo and form tips.'}</Sub>
         </ScrollView>
         <Btn kind="secondary" title="Close" onPress={onClose} style={{ marginTop: 8 }} />
       </View>
