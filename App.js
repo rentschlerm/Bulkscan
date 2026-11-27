@@ -11,10 +11,13 @@ import AddScreen from './src/screens/Add';
 import ProgressScreen from './src/screens/Progress';
 import SettingsScreen from './src/screens/Settings';
 import SetupScreen from './src/screens/Setup';
+import WorkoutScreen from './src/screens/Workout';
+import { burnedOn } from './src/workout';
 
 const TABS = [
   { key: 'today', label: 'Today', icon: '◎' },
   { key: 'add', label: 'Scan / Add', icon: '＋' },
+  { key: 'workout', label: 'Workout', icon: '🏋' },
   { key: 'progress', label: 'Progress', icon: '📈' },
   { key: 'settings', label: 'Settings', icon: '⚙' },
 ];
@@ -30,13 +33,17 @@ function Shell() {
     [store.profile, store.weights, store.settings]
   );
   const todayKcal = sumEntries(store.logs[todayKey()]).kcal;
+  const todayBurn = store.settings.workout?.addBurn ? burnedOn(store.workouts, todayKey()) : 0;
 
   // Keep reminders (incl. the personalised evening nudge) in sync.
   useEffect(() => {
     if (!targets) return;
-    const t = setTimeout(() => scheduleAll(store.settings.reminders, targets.kcal - todayKcal), 1500);
+    const t = setTimeout(
+      () => scheduleAll(store.settings.reminders, targets.kcal + todayBurn - todayKcal, store.settings.workout),
+      1500
+    );
     return () => clearTimeout(t);
-  }, [targets?.kcal, todayKcal, store.settings.reminders]);
+  }, [targets?.kcal, todayKcal, todayBurn, store.settings.reminders, store.settings.workout]);
 
   if (!store.ready) {
     return (
@@ -66,6 +73,7 @@ function Shell() {
             }}
           />
         )}
+        {tab === 'workout' && <WorkoutScreen />}
         {tab === 'progress' && <ProgressScreen targets={targets} />}
         {tab === 'settings' && <SettingsScreen targets={targets} />}
       </View>

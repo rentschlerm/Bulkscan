@@ -132,6 +132,8 @@ export default function ProgressScreen({ targets }) {
         ) : null}
       </Card>
 
+      <Measurements />
+
       {weights.length ? (
         <Card>
           <H>History</H>
@@ -177,5 +179,79 @@ function Progress({ label, have, need }) {
         <View style={{ width: `${pct * 100}%`, height: 6, backgroundColor: C.accent, borderRadius: 3 }} />
       </View>
     </View>
+  );
+}
+
+const PARTS = [
+  { k: 'arm', label: 'Arm (flexed)' },
+  { k: 'chest', label: 'Chest' },
+  { k: 'waist', label: 'Waist (at navel)' },
+  { k: 'thigh', label: 'Thigh' },
+];
+
+function Measurements() {
+  const store = useStore();
+  const list = store.measurements || [];
+  const [v, setV] = useState({});
+  const first = list[0];
+  const last = list[list.length - 1];
+  const save = () => {
+    const m = { date: todayKey() };
+    for (const p of PARTS) {
+      const n = Number(String(v[p.k] || '').replace(',', '.'));
+      if (n > 0) m[p.k] = n;
+    }
+    if (Object.keys(m).length === 1) return Alert.alert('Enter at least one measurement (cm)');
+    store.addMeasurement({ ...(list.find((x) => x.date === m.date) || {}), ...m });
+    setV({});
+  };
+  const d = (k) => (first && last && first[k] && last[k] && first !== last ? last[k] - first[k] : null);
+  const waist = d('waist');
+  const arm = d('arm');
+  return (
+    <Card>
+      <H>Body measurements</H>
+      <Sub style={{ marginBottom: 8 }}>
+        Every 2 weeks, tape measure, same spot. Arms and chest growing with waist steady = muscle. Waist growing fast = slow the gain a bit.
+      </Sub>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+        {PARTS.map((p) => (
+          <Field
+            key={p.k}
+            style={{ width: '48%' }}
+            label={`${p.label}${last?.[p.k] ? ` · last ${last[p.k]}` : ''}`}
+            value={v[p.k] || ''}
+            onChangeText={(x) => setV((o) => ({ ...o, [p.k]: x }))}
+            keyboardType="numeric"
+            placeholder="cm"
+          />
+        ))}
+      </View>
+      <Btn kind="secondary" title="Save measurements" onPress={save} />
+      {list.length > 1 ? (
+        <View style={{ marginTop: 10 }}>
+          {PARTS.map((p) =>
+            d(p.k) != null ? (
+              <Text key={p.k} style={{ color: C.text }}>
+                {p.label}: {first[p.k]} → {last[p.k]} cm{' '}
+                <Text style={{ color: d(p.k) >= 0 ? C.accent : C.danger }}>
+                  ({d(p.k) >= 0 ? '+' : ''}
+                  {d(p.k).toFixed(1)})
+                </Text>
+              </Text>
+            ) : null
+          )}
+          {waist != null && arm != null ? (
+            <Text style={{ color: C.sub, marginTop: 6 }}>
+              {arm > 0 && waist <= arm * 2
+                ? 'Looks like quality gain 👍'
+                : waist > 0 && (arm <= 0 || waist > arm * 3)
+                ? 'Waist is outpacing arms — check you’re training hard and consider a slower gain rate.'
+                : ''}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+    </Card>
   );
 }

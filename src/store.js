@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from './ai';
+import { DEFAULT_WORKOUT_SETTINGS } from './workout';
 
 const KEY = 'bulkscan:data:v1';
 const KEY_NAMES = { anthropic: 'bulkscan_api_key', gemini: 'bulkscan_key_gemini' };
@@ -20,9 +21,20 @@ export const DEFAULT_SETTINGS = {
     dinner: { on: true, time: '19:00' },
     nudge: { on: true, time: '20:30' },
   },
+  workout: DEFAULT_WORKOUT_SETTINGS,
 };
 
-const EMPTY = { profile: null, settings: DEFAULT_SETTINGS, logs: {}, weights: [], myFoods: [] };
+const EMPTY = {
+  profile: null,
+  settings: DEFAULT_SETTINGS,
+  logs: {},
+  weights: [],
+  myFoods: [],
+  workouts: [], // finished sessions
+  routines: [], // custom workouts
+  measurements: [], // {date, arm, chest, waist, thigh}
+  activeSession: null,
+};
 
 const Ctx = createContext(null);
 
@@ -45,6 +57,7 @@ export function StoreProvider({ children }) {
               ...DEFAULT_SETTINGS,
               ...(parsed.settings || {}),
               reminders: { ...DEFAULT_SETTINGS.reminders, ...(parsed.settings?.reminders || {}) },
+              workout: { ...DEFAULT_WORKOUT_SETTINGS, ...(parsed.settings?.workout || {}) },
             },
           });
         }
@@ -98,6 +111,19 @@ export function StoreProvider({ children }) {
     saveMyFood: (food) =>
       update((d) => ({ myFoods: [food, ...d.myFoods.filter((f) => f.name.toLowerCase() !== food.name.toLowerCase())] })),
     removeMyFood: (id) => update((d) => ({ myFoods: d.myFoods.filter((f) => f.id !== id) })),
+    setWorkoutSettings: (patch) =>
+      update((d) => ({ settings: { ...d.settings, workout: { ...d.settings.workout, ...patch } } })),
+    setActiveSession: (fnOrValue) =>
+      update((d) => ({ activeSession: typeof fnOrValue === 'function' ? fnOrValue(d.activeSession) : fnOrValue })),
+    finishSession: (session) =>
+      update((d) => ({ workouts: [...d.workouts, session], activeSession: null })),
+    removeWorkout: (id) => update((d) => ({ workouts: d.workouts.filter((w) => w.id !== id) })),
+    saveRoutine: (r) => update((d) => ({ routines: [r, ...d.routines.filter((x) => x.id !== r.id)] })),
+    removeRoutine: (id) => update((d) => ({ routines: d.routines.filter((x) => x.id !== id) })),
+    addMeasurement: (m) =>
+      update((d) => ({
+        measurements: [...d.measurements.filter((x) => x.date !== m.date), m].sort((a, b) => (a.date < b.date ? -1 : 1)),
+      })),
     exportJson: () => JSON.stringify(data),
     importJson: (text) => {
       const parsed = JSON.parse(text);

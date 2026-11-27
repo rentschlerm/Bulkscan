@@ -5,6 +5,7 @@ import { Card, H, Sub, Btn, Ring, MacroBar, Chip, Field } from '../components/ui
 import { C, MEALS, guessMeal } from '../theme';
 import { sumEntries, todayKey, addDays, keyToDate, macrosFromPer100, streak } from '../nutrition';
 import { BOOSTERS, foodById } from '../foods';
+import { burnedOn } from '../workout';
 
 function dateLabel(key) {
   const t = todayKey();
@@ -13,8 +14,13 @@ function dateLabel(key) {
   return keyToDate(key).toDateString().slice(0, 10);
 }
 
-export default function TodayScreen({ date, setDate, targets, openAdd }) {
+export default function TodayScreen({ date, setDate, targets: baseTargets, openAdd }) {
   const store = useStore();
+  const ws = store.settings.workout || {};
+  const burned = burnedOn(store.workouts || [], date);
+  const workedOut = (store.workouts || []).some((w) => w.date === date);
+  const targets = ws.addBurn && burned ? { ...baseTargets, kcal: baseTargets.kcal + burned, carbs: baseTargets.carbs + Math.round(burned / 4) } : baseTargets;
+  const isWorkoutDay = ws.setupDone && (ws.days || []).includes(keyToDate(date).getDay());
   const entries = store.logs[date] || [];
   const total = sumEntries(entries);
   const left = targets.kcal - total.kcal;
@@ -90,6 +96,13 @@ export default function TodayScreen({ date, setDate, targets, openAdd }) {
 
       <Card style={{ alignItems: 'center' }}>
         <Ring value={total.kcal} target={targets.kcal} />
+        {workedOut ? (
+          <Text style={{ color: C.protein, fontSize: 12, marginTop: 6 }}>
+            🏋 Trained today · ~{burned} kcal burned{ws.addBurn ? ' (added to target)' : ''}
+          </Text>
+        ) : isWorkoutDay && date === todayKey() ? (
+          <Text style={{ color: C.carbs, fontSize: 12, marginTop: 6 }}>🏋 Workout day — check the Workout tab</Text>
+        ) : null}
         <View style={{ flexDirection: 'row', marginTop: 16 }}>
           <MacroBar label="Protein" value={total.protein} target={targets.protein} color={C.protein} />
           <MacroBar label="Carbs" value={total.carbs} target={targets.carbs} color={C.carbs} />
