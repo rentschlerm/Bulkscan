@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { Card, H, Sub, Btn, Field, WeightChart, CalorieBars } from '../components/ui';
 import { C } from '../theme';
 import { todayKey, addDays, keyToDate, sumEntries, movingAverage, weightSlope, calibrate, streak } from '../nutrition';
+import { KScroll, Input } from '../components/keyboard';
 
 export default function ProgressScreen({ targets }) {
   const store = useStore();
@@ -55,7 +56,7 @@ export default function ProgressScreen({ targets }) {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <H style={{ fontSize: 24 }}>Progress</H>
 
       <Card>
@@ -155,7 +156,7 @@ export default function ProgressScreen({ targets }) {
           <Sub style={{ marginTop: 4 }}>Long-press to delete.</Sub>
         </Card>
       ) : null}
-    </ScrollView>
+    </KScroll>
   );
 }
 

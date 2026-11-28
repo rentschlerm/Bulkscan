@@ -7,6 +7,7 @@ import { C } from '../theme';
 import { searchRaw, searchLocal } from '../foods';
 import { macrosFromPer100, sumEntries } from '../nutrition';
 import { newId } from '../store';
+import { KScroll, Input } from '../components/keyboard';
 
 export default function RecipeMode({ myFoods, onSave, onCancel }) {
   const [name, setName] = useState('');
@@ -70,7 +71,7 @@ export default function RecipeMode({ myFoods, onSave, onCancel }) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <H style={{ fontSize: 22 }}>Recipe builder</H>
       <Sub style={{ marginBottom: 12 }}>
         The most accurate way to count home cooking. Weigh each ingredient raw, weigh the finished dish, and you get exact calories
@@ -86,7 +87,7 @@ export default function RecipeMode({ myFoods, onSave, onCancel }) {
           return (
             <View key={r.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.border }}>
               <Text style={{ color: C.text, flex: 1 }} numberOfLines={2}>{r.food.name}</Text>
-              <TextInput
+              <Input
                 value={String(r.grams)}
                 keyboardType="numeric"
                 onChangeText={(v) => setGrams(r.key, Number(v.replace(/[^0-9]/g, '')) || 0)}
@@ -134,6 +135,6 @@ export default function RecipeMode({ myFoods, onSave, onCancel }) {
       ) : null}
 
       <Btn kind="secondary" title="Back" onPress={onCancel} style={{ marginBottom: 24 }} />
-    </ScrollView>
+    </KScroll>
   );
 }

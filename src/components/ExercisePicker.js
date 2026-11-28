@@ -4,6 +4,7 @@ import { C } from '../theme';
 import { H, Sub, Chip, Btn, Field } from './ui';
 import { EXERCISES, MUSCLES, hasGear } from '../exercises';
 import ExerciseDemo from './ExerciseDemo';
+import { KScroll, Input } from './keyboard';
 
 const GEAR_LABEL = { db: 'dumbbells', bench: 'bench', bar: 'pull-up bar', band: 'band', bb: 'barbell', gym: 'machine' };
 
@@ -38,16 +39,16 @@ export default function ExercisePicker({ visible, onClose, onPick, gear, title =
         {!only ? (
           <>
             <Field placeholder="Search exercises" value={q} onChangeText={setQ} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 4 }}>
+            <KScroll horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 4 }}>
               <Chip label="All" active={!muscle} onPress={() => setMuscle(null)} />
               {MUSCLES.map((m) => (
                 <Chip key={m} label={m} active={muscle === m} onPress={() => setMuscle(m)} />
               ))}
-            </ScrollView>
+            </KScroll>
             {gear ? <Chip label={mine ? '✓ Only my equipment' : 'Showing all equipment'} active={mine} onPress={() => setMine(!mine)} /> : null}
           </>
         ) : null}
-        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+        <KScroll style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
           {list.length === 0 ? <Sub>No exercises match.</Sub> : null}
           {list.map((ex) => (
             <TouchableOpacity
@@ -72,7 +73,7 @@ export default function ExercisePicker({ visible, onClose, onPick, gear, title =
             </TouchableOpacity>
           ))}
           <Sub style={{ marginTop: 8 }}>{onPick ? 'Tip: long-press an exercise to watch the demo first.' : 'Tap an exercise to watch the demo and form tips.'}</Sub>
-        </ScrollView>
+        </KScroll>
         <Btn kind="secondary" title="Close" onPress={onClose} style={{ marginTop: 8 }} />
       </View>
     </Modal>

@@ -10,6 +10,7 @@ import { lookupBarcode, searchProducts } from '../openfoodfacts';
 import { searchLocal } from '../foods';
 import { macrosFromPer100, sumEntries } from '../nutrition';
 import RecipeMode from './Recipe';
+import { KScroll, Input } from '../components/keyboard';
 
 const CONF_COLOR = { high: C.accent, medium: C.carbs, low: C.danger };
 
@@ -244,9 +245,9 @@ export default function AddScreen({ date, initialMode, onDone }) {
 
   if (mode === 'photo') {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
+      <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
         <H>Meal photo</H>
-        <ScrollView horizontal style={{ marginBottom: 12 }}>
+        <KScroll horizontal style={{ marginBottom: 12 }}>
           {photos.map((p, i) => (
             <Image key={i} source={{ uri: p.uri }} style={{ width: 150, height: 150, borderRadius: 12, marginRight: 8 }} />
           ))}
@@ -255,13 +256,13 @@ export default function AddScreen({ date, initialMode, onDone }) {
               <ActivityIndicator color={C.accent} />
             </View>
           ) : null}
-        </ScrollView>
+        </KScroll>
         {photos.length < 3 ? (
           <Btn kind="secondary" title="+ Add another angle (more accurate)" onPress={() => takePhoto(true)} style={{ marginBottom: 12 }} />
         ) : null}
         <Card>
           <Text style={ui.label}>Tell the AI anything it can't see (optional, but big accuracy boost)</Text>
-          <TextInput
+          <Input
             value={context}
             onChangeText={setContext}
             multiline
@@ -284,13 +285,13 @@ export default function AddScreen({ date, initialMode, onDone }) {
           </Sub>
         ) : null}
         <Btn kind="secondary" title={loading ? 'Stop' : 'Cancel'} onPress={loading ? cancelAnalysis : reset} style={{ marginTop: 8 }} />
-      </ScrollView>
+      </KScroll>
     );
   }
 
   if (mode === 'review') {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <H style={{ marginBottom: 0 }}>Check & adjust</H>
           <Text style={{ color: C.accent, fontSize: 22, fontWeight: '800' }}>{total.kcal} kcal</Text>
@@ -308,7 +309,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
         {computed.map((it) => (
           <Card key={it.key}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TextInput
+              <Input
                 value={it.name}
                 onChangeText={(v) => setItem(it.key, { name: v })}
                 style={{ color: C.text, fontSize: 16, fontWeight: '700', flex: 1, padding: 0 }}
@@ -332,7 +333,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
             {it.note ? <Sub style={{ marginTop: 2 }}>{it.note}</Sub> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
               <Btn small kind="secondary" title="−25" onPress={() => setItem(it.key, { grams: Math.max(0, it.grams - 25), weighed: false })} />
-              <TextInput
+              <Input
                 value={String(it.grams)}
                 keyboardType="numeric"
                 onChangeText={(v) => setItem(it.key, { grams: Number(v.replace(/[^0-9]/g, '')) || 0 })}
@@ -396,14 +397,14 @@ export default function AddScreen({ date, initialMode, onDone }) {
 
         <Btn title={`Log ${total.kcal} kcal`} onPress={log} disabled={!items.length} />
         <Btn kind="secondary" title="Discard" onPress={reset} style={{ marginTop: 8, marginBottom: 24 }} />
-      </ScrollView>
+      </KScroll>
     );
   }
 
   // menu
   const noKey = !store.apiKey;
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
       <H style={{ fontSize: 24 }}>Add food</H>
       {noKey ? (
         <Card style={{ borderColor: C.carbs }}>
@@ -416,7 +417,7 @@ export default function AddScreen({ date, initialMode, onDone }) {
       <MenuItem icon="▦" title="Scan barcode" desc="Packaged food only (Milo, canned goods, noodles, bread)" onPress={() => setMode('barcode')} />
       <MenuItem icon="🔎" title="Search foods" desc="Filipino dishes, your saved meals, and packaged products" onPress={() => setMode('search')} />
       <MenuItem icon="✏️" title="Manual entry" desc="Type calories from a label or menu" onPress={() => setMode('manual')} />
-    </ScrollView>
+    </KScroll>
   );
 }
 
@@ -518,7 +519,7 @@ function SearchMode({ myFoods, onCancel, onPick }) {
   );
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <Field placeholder="Search: adobo, rice, pandesal, Milo…" value={q} onChangeText={(v) => { setQ(v); setOnline([]); }} />
       <Card>
         {local.length ? local.map((f) => <Row key={f.id} f={f} />) : <Sub>No match in built-in foods.</Sub>}
@@ -530,7 +531,7 @@ function SearchMode({ myFoods, onCancel, onPick }) {
         </Card>
       ) : null}
       <Btn kind="secondary" title="Back" onPress={onCancel} style={{ marginTop: 12, marginBottom: 24 }} />
-    </ScrollView>
+    </KScroll>
   );
 }
 
@@ -558,7 +559,7 @@ function ManualMode({ barcode, onCancel, onAdd }) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <H>{barcode ? 'New product' : 'Manual entry'}</H>
       {barcode ? <Sub style={{ marginBottom: 12 }}>Barcode {barcode} — copy the values from the nutrition label.</Sub> : null}
       <Field label="Name" value={v.name} onChangeText={set('name')} />
@@ -574,6 +575,6 @@ function ManualMode({ barcode, onCancel, onAdd }) {
       <Chip label={remember ? '★ Remember in My Foods' : '☆ Remember in My Foods'} active={remember} onPress={() => setRemember(!remember)} />
       <Btn title="Add" onPress={add} style={{ marginTop: 8 }} />
       <Btn kind="secondary" title="Back" onPress={onCancel} style={{ marginTop: 8 }} />
-    </ScrollView>
+    </KScroll>
   );
 }

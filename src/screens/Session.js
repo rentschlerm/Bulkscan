@@ -10,6 +10,7 @@ import { EX, WARMUP, swapOptions } from '../exercises';
 import { gearFor, makeExercise, sessionStats, burnKcal, findPRs, fmtTime } from '../workout';
 import { scheduleRestEnd, cancelRest } from '../reminders';
 import { latestWeight } from '../nutrition';
+import { KScroll, Input, useKeyboardVisible } from '../components/keyboard';
 
 const READY_SECS = 5;
 
@@ -23,6 +24,7 @@ export default function SessionScreen({ onMinimize, onFinished }) {
   const [timed, setTimed] = useState(null); // {ex, set, phase:'ready'|'go', endAt, time}
   const [warmOpen, setWarmOpen] = useState(true);
   const [showDemo, setShowDemo] = useState(true);
+  const keyboardOpen = useKeyboardVisible();
   const alerted = useRef(false);
 
   useEffect(() => {
@@ -204,21 +206,25 @@ export default function SessionScreen({ onMinimize, onFinished }) {
           <Text style={{ color: C.text, fontWeight: '800', fontSize: 16 }} numberOfLines={1}>
             {session.name}
           </Text>
-          <Text style={{ color: C.accent, fontSize: 13 }}>⏱ {fmtTime(elapsed)}</Text>
+          <Text style={{ color: C.accent, fontSize: 13 }}>
+            ⏱ {fmtTime(elapsed)}
+            {keyboardOpen && rest ? <Text style={{ color: C.carbs }}>   Rest {fmtTime(Math.ceil((rest.endAt - now) / 1000))}</Text> : null}
+            {keyboardOpen && timed ? <Text style={{ color: C.protein }}>   {timed.phase === 'ready' ? 'Get ready' : 'Hold'} {fmtTime(Math.ceil((timed.endAt - now) / 1000))}</Text> : null}
+          </Text>
         </View>
         <Btn small title="Finish" onPress={finish} />
       </View>
 
       {/* Exercise strip */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, paddingVertical: 8, paddingLeft: 12 }}>
+      <KScroll horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, paddingVertical: 8, paddingLeft: 12 }}>
         {session.exercises.map((e, i) => {
           const all = e.sets.every((x) => x.done);
           return <Chip key={e.id + i} label={`${all ? '✓ ' : ''}${i + 1}. ${EX[e.id]?.name || e.id}`} active={i === idx} onPress={() => goTo(i)} />;
         })}
         <Chip label="+ Add" onPress={() => setPicker('add')} />
-      </ScrollView>
+      </KScroll>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: rest || timed ? 170 : 24 }} keyboardShouldPersistTaps="handled">
+      <KScroll style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: (rest || timed) && !keyboardOpen ? 170 : 24 }} keyboardShouldPersistTaps="handled">
         {!anyDone ? (
           <Card>
             <TouchableOpacity onPress={() => setWarmOpen(!warmOpen)}>
@@ -326,10 +332,10 @@ export default function SessionScreen({ onMinimize, onFinished }) {
             <Btn title="Finish workout" onPress={finish} style={{ flex: 1 }} />
           )}
         </View>
-      </ScrollView>
+      </KScroll>
 
       {/* Rest / timed overlay */}
-      {timed ? (
+      {keyboardOpen ? null : timed ? (
         <Overlay
           color={timed.phase === 'ready' ? C.carbs : C.protein}
           label={timed.phase === 'ready' ? 'Get ready' : `${def?.name || 'Hold'}`}
@@ -365,7 +371,7 @@ export default function SessionScreen({ onMinimize, onFinished }) {
 
 function NumIn({ value, onChange, placeholder, decimal }) {
   return (
-    <TextInput
+    <Input
       value={value === '' || value == null ? '' : String(value)}
       onChangeText={(v) => onChange(decimal ? v.replace(/[^0-9.]/g, '') : v.replace(/[^0-9]/g, ''))}
       keyboardType={decimal ? 'decimal-pad' : 'number-pad'}

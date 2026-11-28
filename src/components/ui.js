@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import Svg, { Circle, Path, Line, Rect, Text as SvgText } from 'react-native-svg';
 import { C } from '../theme';
+import { KScroll, Input } from './keyboard';
 
 export function Card({ children, style }) {
   return <View style={[s.card, style]}>{children}</View>;
@@ -41,7 +42,7 @@ export function Field({ label, value, onChangeText, keyboardType = 'default', pl
   return (
     <View style={[{ marginBottom: 12 }, style]}>
       {label ? <Text style={s.label}>{label}</Text> : null}
-      <TextInput
+      <Input
         value={value == null ? '' : String(value)}
         onChangeText={onChangeText}
         keyboardType={keyboardType}

@@ -6,6 +6,7 @@ import ProfileForm from '../components/ProfileForm';
 import { C } from '../theme';
 import { PROVIDERS, DEFAULT_PROVIDER } from '../ai';
 import { Chip } from '../components/ui';
+import { KScroll, Input } from '../components/keyboard';
 
 const REMINDER_LABELS = {
   weighIn: 'Morning weigh-in',
@@ -31,7 +32,7 @@ export default function SettingsScreen({ targets }) {
     store.setSettings({ reminders: { ...r, [k]: { ...r[k], ...patch } } });
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <H style={{ fontSize: 24 }}>Settings</H>
 
       <Card>
@@ -131,7 +132,7 @@ export default function SettingsScreen({ targets }) {
         {Object.keys(REMINDER_LABELS).map((k) => (
           <View key={k} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
             <Text style={{ color: C.text, flex: 1 }}>{REMINDER_LABELS[k]}</Text>
-            <TextInput
+            <Input
               onEndEditing={(e) => {
                 const t = e.nativeEvent.text;
                 if (!/^\d{1,2}:\d{2}$/.test(t)) Alert.alert('Use 24-hour time like 19:30');
@@ -173,7 +174,7 @@ export default function SettingsScreen({ targets }) {
         <H>Backup</H>
         <Sub style={{ marginBottom: 8 }}>Data lives on this phone. Export now and then (send it to yourself on Messenger or email).</Sub>
         <Btn kind="secondary" title="Export backup" onPress={() => Share.share({ message: store.exportJson() })} />
-        <TextInput
+        <Input
           value={importText}
           onChangeText={setImportText}
           placeholder="Paste a backup here to restore"
@@ -211,6 +212,6 @@ export default function SettingsScreen({ targets }) {
         BulkScan gives estimates, not medical advice. If you're underweight because of a health issue or appetite loss, check with a
         doctor.
       </Sub>
-    </ScrollView>
+    </KScroll>
   );
 }

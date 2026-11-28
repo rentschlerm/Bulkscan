@@ -6,6 +6,7 @@ import { C, MEALS, guessMeal } from '../theme';
 import { sumEntries, todayKey, addDays, keyToDate, macrosFromPer100, streak } from '../nutrition';
 import { BOOSTERS, foodById } from '../foods';
 import { burnedOn } from '../workout';
+import { KScroll, Input, KeyboardSafe } from '../components/keyboard';
 
 function dateLabel(key) {
   const t = todayKey();
@@ -76,7 +77,7 @@ export default function TodayScreen({ date, setDate, targets: baseTargets, openA
     .slice(0, 4);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <TouchableOpacity onPress={() => setDate(addDays(date, -1))} style={{ padding: 8 }}>
           <Text style={{ color: C.text, fontSize: 22 }}>‹</Text>
@@ -182,6 +183,7 @@ export default function TodayScreen({ date, setDate, targets: baseTargets, openA
       ) : null}
 
       <Modal visible={!!edit} transparent animationType="slide" onRequestClose={() => setEdit(null)}>
+        <KeyboardSafe>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#0008' }}>
           <View style={{ backgroundColor: C.card, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
             {edit ? (
@@ -231,7 +233,8 @@ export default function TodayScreen({ date, setDate, targets: baseTargets, openA
             ) : null}
           </View>
         </View>
+        </KeyboardSafe>
       </Modal>
-    </ScrollView>
+    </KScroll>
   );
 }

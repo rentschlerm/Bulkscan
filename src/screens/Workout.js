@@ -7,6 +7,7 @@ import SessionScreen from './Session';
 import { C } from '../theme';
 import { EQUIPMENT, EX, PROGRAMS, PROGRAM, recommendProgram, resolve } from '../exercises';
 import { gearFor, buildSession, nextDayIndex, thisWeekCount, weekStreak, bestLifts, weekKeyStart, fmtTime } from '../workout';
+import { KScroll, Input } from '../components/keyboard';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -103,7 +104,7 @@ function Home({ onStart, onResume, onSetup, onBuild }) {
   const todayIsDay = ws.days.includes(new Date().getDay());
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <H style={{ fontSize: 24 }}>Workout</H>
         <TouchableOpacity onPress={onSetup}>
@@ -237,7 +238,7 @@ function Home({ onStart, onResume, onSetup, onBuild }) {
       </Card>
 
       <ExercisePicker visible={library} title="Exercise library" gear={gear} onClose={() => setLibrary(false)} />
-    </ScrollView>
+    </KScroll>
   );
 }
 
@@ -263,7 +264,7 @@ function Setup({ onDone }) {
   const toggleDay = (d) => set({ days: w.days.includes(d) ? w.days.filter((x) => x !== d) : [...w.days, d].sort() });
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <H style={{ fontSize: 24 }}>Your training plan</H>
       <Sub style={{ marginBottom: 12 }}>
         Eating in a surplus without training mostly adds fat. Lifting tells your body to turn those extra calories into muscle.
@@ -297,7 +298,7 @@ function Setup({ onDone }) {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
           <Text style={{ color: C.text, flex: 1 }}>Remind me at</Text>
-          <TextInput
+          <Input
             defaultValue={w.time}
             onEndEditing={(e) => {
               const t = e.nativeEvent.text;
@@ -352,7 +353,7 @@ function Setup({ onDone }) {
         }}
       />
       {store.settings.workout.setupDone ? <Btn kind="secondary" title="Cancel" onPress={onDone} style={{ marginTop: 8, marginBottom: 24 }} /> : null}
-    </ScrollView>
+    </KScroll>
   );
 }
 
@@ -376,7 +377,7 @@ function Builder({ onDone }) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+    <KScroll style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
       <H style={{ fontSize: 24 }}>Build a routine</H>
       <Field label="Name" value={name} onChangeText={setName} placeholder="e.g. Arms day" />
       {items.map((it, i) => {
@@ -417,6 +418,6 @@ function Builder({ onDone }) {
           setPicking(false);
         }}
       />
-    </ScrollView>
+    </KScroll>
   );
 }

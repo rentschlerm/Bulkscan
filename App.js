@@ -13,6 +13,7 @@ import SettingsScreen from './src/screens/Settings';
 import SetupScreen from './src/screens/Setup';
 import WorkoutScreen from './src/screens/Workout';
 import { burnedOn } from './src/workout';
+import { RootKeyboardAvoider, useKeyboardVisible } from './src/components/keyboard';
 
 const TABS = [
   { key: 'today', label: 'Today', icon: '◎' },
@@ -27,6 +28,7 @@ function Shell() {
   const [tab, setTab] = useState('today');
   const [addMode, setAddMode] = useState(null); // lets Today open a specific add mode
   const [date, setDate] = useState(todayKey());
+  const keyboardOpen = useKeyboardVisible();
 
   const targets = useMemo(
     () => (store.profile ? computeTargets(store.profile, store.weights, store.settings) : null),
@@ -77,7 +79,8 @@ function Shell() {
         {tab === 'progress' && <ProgressScreen targets={targets} />}
         {tab === 'settings' && <SettingsScreen targets={targets} />}
       </View>
-      <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.card }}>
+      {/* Hide the tab bar while typing so the field has the room */}
+      <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.card, display: keyboardOpen ? 'none' : 'flex' }}>
         {TABS.map((t) => (
           <TouchableOpacity
             key={t.key}
@@ -102,7 +105,9 @@ export default function App() {
       <StoreProvider>
         <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'bottom']}>
           <StatusBar style="light" />
-          <Shell />
+          <RootKeyboardAvoider>
+            <Shell />
+          </RootKeyboardAvoider>
         </SafeAreaView>
       </StoreProvider>
     </SafeAreaProvider>
